@@ -193,6 +193,17 @@ public class DataProcessor extends AbstractProcessor {
 											names.fromString("aesEncrypt")),
 									com.sun.tools.javac.util.List.of(treeMaker.Ident(variableName))));
 					System.out.println(encryptCode);
+
+					treeMaker.pos = meth.pos;
+					meth.body = treeMaker.Block(0, List.of(
+							treeMaker.Exec(
+									treeMaker.Apply(
+											com.sun.tools.javac.util.List.nil(),
+											treeMaker.Select(
+													treeMaker.Ident(names.fromString("com.duowan.util.DataSecurityService")),
+													names.fromString("aesEncrypt")),
+											com.sun.tools.javac.util.List.of(treeMaker.Ident(variableName)))),
+							meth.body));
 					String codes = ((JCMethodDecl) e).getBody().toString();
 					System.out.println("codes is "+codes);
 				}
