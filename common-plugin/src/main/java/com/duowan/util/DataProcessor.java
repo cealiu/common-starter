@@ -136,10 +136,10 @@ public class DataProcessor extends AbstractProcessor {
 		jcClass.defs.stream().forEach(e->{
 			if(e.hasTag(JCTree.Tag.METHODDEF)){
 				JCMethodDecl meth = (JCMethodDecl)e;
-				System.out.println(meth.getName().toString());
+//				System.out.println(meth.getName().toString());
 				if (methodName.contentEquals(meth.getName())){
 					String codes = ((JCMethodDecl) e).getBody().toString();
-					System.out.println(codes);
+//					System.out.println(codes);
 				}
 			}
 		});
@@ -182,7 +182,7 @@ public class DataProcessor extends AbstractProcessor {
 		jcClass.defs.stream().forEach(e->{
 			if(e.hasTag(JCTree.Tag.METHODDEF)){
 				JCMethodDecl meth = (JCMethodDecl)e;
-				System.out.println(meth.getName().toString());
+				System.out.println(meth.getBody().toString());
 				if (methodName.contentEquals(meth.getName())){
 					JCBlock jcBlock = ((JCMethodDecl) e).getBody();
 					JCTree.JCStatement encryptCode = treeMaker.Exec(
@@ -192,10 +192,10 @@ public class DataProcessor extends AbstractProcessor {
 											treeMaker.Ident(names.fromString("com.duowan.util.DataSecurityService")),
 											names.fromString("aesEncrypt")),
 									com.sun.tools.javac.util.List.of(treeMaker.Ident(variableName))));
-					System.out.println(encryptCode);
+//					System.out.println(encryptCode);
 
-					treeMaker.pos = meth.pos;
-					meth.body = treeMaker.Block(0, List.of(
+					treeMaker.pos = ((JCMethodDecl)e).pos;
+					((JCMethodDecl)e).body = treeMaker.Block(0, List.of(
 							treeMaker.Exec(
 									treeMaker.Apply(
 											com.sun.tools.javac.util.List.nil(),
@@ -203,8 +203,8 @@ public class DataProcessor extends AbstractProcessor {
 													treeMaker.Ident(names.fromString("com.duowan.util.DataSecurityService")),
 													names.fromString("aesEncrypt")),
 											com.sun.tools.javac.util.List.of(treeMaker.Ident(variableName)))),
-							meth.body));
-					String codes = ((JCMethodDecl) e).getBody().toString();
+							((JCMethodDecl)e).body.getStatements().get(0)));
+					String codes = ((JCMethodDecl)e).getBody().toString();
 					System.out.println("codes is "+codes);
 				}
 			}
