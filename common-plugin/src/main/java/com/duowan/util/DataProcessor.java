@@ -7,6 +7,7 @@ import com.sun.tools.javac.api.JavacTrees;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.code.Type;
+import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.JCClassDecl;
@@ -61,6 +62,8 @@ public class DataProcessor extends AbstractProcessor {
 	private Messager messager;
 
 	private Filer filer;
+
+
 
 	@Override
 	public synchronized void init(ProcessingEnvironment processingEnvironment) {
@@ -128,7 +131,7 @@ public class DataProcessor extends AbstractProcessor {
 				super.visitMethodDef(jcMethod);
 			}
 		}));
-		return true;
+		return false;
 	}
 
 	private void deleteGetterMethod(JCClassDecl jcClass, JCVariableDecl jcVariable){
@@ -184,28 +187,35 @@ public class DataProcessor extends AbstractProcessor {
 				JCMethodDecl meth = (JCMethodDecl)e;
 				System.out.println(meth.getBody().toString());
 				if (methodName.contentEquals(meth.getName())){
-					JCBlock jcBlock = ((JCMethodDecl) e).getBody();
-					JCTree.JCStatement encryptCode = treeMaker.Exec(
-							treeMaker.Apply(
-									com.sun.tools.javac.util.List.nil(),
-									treeMaker.Select(
-											treeMaker.Ident(names.fromString("com.duowan.util.DataSecurityService")),
-											names.fromString("aesEncrypt")),
-									com.sun.tools.javac.util.List.of(treeMaker.Ident(variableName))));
-//					System.out.println(encryptCode);
+					JCTree tree = e.getTree();
+					tree.accept(new TreeTranslator() {
+						/**
+						 * 方法的代码块，在代码块的第一行添加代码：System.out.println("Hello World!!!");
+						 *
+						 * @param tree
+						 */
+						@Override
+						public void visitBlock(JCTree.JCBlock tree) {
+							ListBuffer<JCTree.JCStatement> statements = new ListBuffer();
 
-					treeMaker.pos = ((JCMethodDecl)e).pos;
-					((JCMethodDecl)e).body = treeMaker.Block(0, List.of(
-							treeMaker.Exec(
-									treeMaker.Apply(
-											com.sun.tools.javac.util.List.nil(),
-											treeMaker.Select(
-													treeMaker.Ident(names.fromString("com.duowan.util.DataSecurityService")),
-													names.fromString("aesEncrypt")),
-											com.sun.tools.javac.util.List.of(treeMaker.Ident(variableName)))),
-							((JCMethodDecl)e).body.getStatements().get(0)));
-					String codes = ((JCMethodDecl)e).getBody().toString();
-					System.out.println("codes is "+codes);
+							// 创建代码: System.out.println("Hello World!!!");
+							JCTree.JCFieldAccess fieldAccess = treeMaker.Select(treeMaker.Select(treeMaker.Ident(names.fromString("System")), names.fromString("out")), names.fromString("println"));
+							JCTree.JCExpression argsExpr = treeMaker.Literal("Hello world!!!");
+							JCTree.JCMethodInvocation methodInvocation = treeMaker.Apply(List.nil(), fieldAccess, List.of(argsExpr));
+							JCTree.JCExpressionStatement code = treeMaker.Exec(methodInvocation);
+
+							// 把代码加到方法体之前
+							statements.append(code);
+
+							// 把原来的方法体写回去
+							for (int i = 0; i < tree.getStatements().size(); i++) {
+								statements.append(tree.getStatements().get(i));
+							}
+
+							result = treeMaker.Block(0, statements.toList());
+							super.visitBlock(tree);
+						}
+					});
 				}
 			}
 		});
