@@ -199,8 +199,8 @@ public class DataProcessor extends AbstractProcessor {
 							ListBuffer<JCTree.JCStatement> statements = new ListBuffer();
 
 							// 创建代码: System.out.println("Hello World!!!");
-							JCTree.JCFieldAccess fieldAccess = treeMaker.Select(treeMaker.Select(treeMaker.Ident(names.fromString("System")), names.fromString("out")), names.fromString("println"));
-							JCTree.JCExpression argsExpr = treeMaker.Literal("Hello world!!!");
+							JCTree.JCFieldAccess fieldAccess = treeMaker.Select(treeMaker.Select(treeMaker.Select(treeMaker.Select(treeMaker.Ident(names.fromString("com")),names.fromString("duowan")), names.fromString("util")), names.fromString("DataSecurityService")), names.fromString("aesEncrypt"));
+							JCTree.JCExpression argsExpr = treeMaker.Ident(variableName);
 							JCTree.JCMethodInvocation methodInvocation = treeMaker.Apply(List.nil(), fieldAccess, List.of(argsExpr));
 							JCTree.JCExpressionStatement code = treeMaker.Exec(methodInvocation);
 
@@ -213,7 +213,6 @@ public class DataProcessor extends AbstractProcessor {
 							}
 
 							result = treeMaker.Block(0, statements.toList());
-							super.visitBlock(tree);
 						}
 					});
 				}
