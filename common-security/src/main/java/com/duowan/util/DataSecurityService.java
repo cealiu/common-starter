@@ -7,4 +7,8 @@ public class DataSecurityService {
 
 		return "test+"+data;
 	}
+
+	public static String aesDecrypt(String data){
+		return data.substring(5);
+	}
 }

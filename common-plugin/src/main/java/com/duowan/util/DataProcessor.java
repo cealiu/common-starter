@@ -4,21 +4,9 @@ import com.duowan.annotation.EncryptData;
 import com.google.common.base.CaseFormat;
 import com.sun.source.tree.Tree;
 import com.sun.tools.javac.api.JavacTrees;
-import com.sun.tools.javac.code.Flags;
-import com.sun.tools.javac.code.Symbol;
-import com.sun.tools.javac.code.Type;
-import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
-import com.sun.tools.javac.tree.JCTree.JCClassDecl;
-import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
-import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
-import com.sun.tools.javac.tree.JCTree.JCExpression;
-import com.sun.tools.javac.tree.JCTree.JCStatement;
-import com.sun.tools.javac.tree.JCTree.JCBlock;
-import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
-import com.sun.tools.javac.tree.JCTree.JCModifiers;
-import com.sun.tools.javac.tree.JCTree.JCExpressionStatement;
+import com.sun.tools.javac.tree.JCTree.*;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.tree.TreeTranslator;
 import com.sun.tools.javac.util.*;
@@ -100,20 +88,14 @@ public class DataProcessor extends AbstractProcessor {
 							JCTree.JCIdent jcIdent=(JCTree.JCIdent)annotation.getAnnotationType();
 							if(jcIdent.name.contentEquals("EncryptField")&&
 									jcVariable.getType().toString().equals("String")){
-								deleteGetterMethod(jcClass,jcVariable);
-								deleteSetterMethod(jcClass,jcVariable);
-								//增加get方法
-								//jcClass.defs = jcClass.defs.prepend(generateGetterMethod(jcClass,jcVariable));
-								//增加set方法
-								//jcClass.defs = jcClass.defs.prepend(generateSetterMethod(jcClass,jcVariable));
+//								modifyGetterMethod(jcClass,jcVariable);
+								modifySetterMethod(jcClass,jcVariable);
 							}
 						}
 					} catch (Exception e) {
 						messager.printMessage(Diagnostic.Kind.ERROR, "error");
 					}
 				});
-				//增加toString方法
-//				jcClass.defs = jcClass.defs.prepend(generateToStringBuilderMethod());
 				super.visitClassDef(jcClass);
 			}
 
@@ -134,84 +116,23 @@ public class DataProcessor extends AbstractProcessor {
 		return false;
 	}
 
-	private void deleteGetterMethod(JCClassDecl jcClass, JCVariableDecl jcVariable){
-		Name methodName = handleMethodSignature(jcVariable.getName(), "get");
-		jcClass.defs.stream().forEach(e->{
-			if(e.hasTag(JCTree.Tag.METHODDEF)){
-				JCMethodDecl meth = (JCMethodDecl)e;
-//				System.out.println(meth.getName().toString());
-				if (methodName.contentEquals(meth.getName())){
-					String codes = ((JCMethodDecl) e).getBody().toString();
-//					System.out.println(codes);
-				}
-			}
-		});
-	}
-
-	private JCMethodDecl generateGetterMethod(JCClassDecl jcClass, JCVariableDecl jcVariable) {
-
-		//修改方法级别
-		JCTree.JCModifiers jcModifiers = treeMaker.Modifiers(Flags.PUBLIC);
-
-		//添加方法名称
-		Name methodName = handleMethodSignature(jcVariable.getName(), "get");
-
-		//添加方法内容
-		ListBuffer<JCStatement> jcStatements = new ListBuffer<>();
-		jcStatements.append(
-				treeMaker.Return(treeMaker.Select(treeMaker.Ident(getNameFromString("this")), jcVariable.getName())));
-		JCBlock jcBlock = treeMaker.Block(0, jcStatements.toList());
-
-		//添加返回值类型
-		JCExpression returnType = jcVariable.vartype;
-
-		//参数类型
-		List<JCTypeParameter> typeParameters = List.nil();
-
-		//参数变量
-		List<JCVariableDecl> parameters = List.nil();
-
-		//声明异常
-		List<JCExpression> throwsClauses = List.nil();
-		//构建方法
-		return treeMaker
-				.MethodDef(jcModifiers, methodName, returnType, typeParameters, parameters, throwsClauses, jcBlock, null);
-	}
-
-	private void deleteSetterMethod(JCClassDecl jcClass,JCVariableDecl jcVariable){
+	private void modifyGetterMethod(JCClassDecl jcClass, JCVariableDecl jcVariable){
 		Name variableName = jcVariable.getName();
-		Name methodName = handleMethodSignature(variableName, "set");
-
+		Name methodName = handleMethodSignature(variableName, "get");
 		jcClass.defs.stream().forEach(e->{
 			if(e.hasTag(JCTree.Tag.METHODDEF)){
 				JCMethodDecl meth = (JCMethodDecl)e;
-				System.out.println(meth.getBody().toString());
 				if (methodName.contentEquals(meth.getName())){
 					JCTree tree = e.getTree();
 					tree.accept(new TreeTranslator() {
-						/**
-						 * 方法的代码块，在代码块的第一行添加代码：System.out.println("Hello World!!!");
-						 *
-						 * @param tree
-						 */
 						@Override
 						public void visitBlock(JCTree.JCBlock tree) {
 							ListBuffer<JCTree.JCStatement> statements = new ListBuffer();
-
-							// 创建代码: System.out.println("Hello World!!!");
-							JCTree.JCFieldAccess fieldAccess = treeMaker.Select(treeMaker.Select(treeMaker.Select(treeMaker.Select(treeMaker.Ident(names.fromString("com")),names.fromString("duowan")), names.fromString("util")), names.fromString("DataSecurityService")), names.fromString("aesEncrypt"));
+							JCTree.JCFieldAccess fieldAccess = treeMaker.Select(treeMaker.Select(treeMaker.Select(treeMaker.Select(treeMaker.Ident(names.fromString("com")),names.fromString("duowan")), names.fromString("util")), names.fromString("DataSecurityService")), names.fromString("aesDecrypt"));
 							JCTree.JCExpression argsExpr = treeMaker.Ident(variableName);
 							JCTree.JCMethodInvocation methodInvocation = treeMaker.Apply(List.nil(), fieldAccess, List.of(argsExpr));
-							JCTree.JCExpressionStatement code = treeMaker.Exec(methodInvocation);
-
-							// 把代码加到方法体之前
+							JCTree.JCReturn code = treeMaker.Return(methodInvocation);
 							statements.append(code);
-
-							// 把原来的方法体写回去
-							for (int i = 0; i < tree.getStatements().size(); i++) {
-								statements.append(tree.getStatements().get(i));
-							}
-
 							result = treeMaker.Block(0, statements.toList());
 						}
 					});
@@ -220,73 +141,32 @@ public class DataProcessor extends AbstractProcessor {
 		});
 	}
 
-	private JCMethodDecl generateSetterMethod(JCClassDecl jcClass,JCVariableDecl jcVariable) throws ReflectiveOperationException {
-
-		//修改方法级别
-		JCModifiers modifiers = treeMaker.Modifiers(Flags.PUBLIC);
-
-		//添加方法名称
+	private void modifySetterMethod(JCClassDecl jcClass,JCVariableDecl jcVariable){
 		Name variableName = jcVariable.getName();
 		Name methodName = handleMethodSignature(variableName, "set");
 
-		//设置方法体
-		ListBuffer<JCStatement> jcStatements = new ListBuffer<>();
-		jcStatements.append(treeMaker.Exec(treeMaker
-				.Assign(treeMaker.Select(treeMaker.Ident(getNameFromString("this")), variableName),
-						treeMaker.Ident(variableName))));
-		//定义方法体
-		JCBlock jcBlock = treeMaker.Block(0, jcStatements.toList());
-
-		//添加返回值类型
-		JCExpression returnType =
-				treeMaker.Type((Type)(Class.forName("com.sun.tools.javac.code.Type$JCVoidType").newInstance()));
-
-		List<JCTypeParameter> typeParameters = List.nil();
-
-		//定义参数
-		JCVariableDecl variableDecl = treeMaker
-				.VarDef(treeMaker.Modifiers(Flags.PARAMETER, List.nil()), jcVariable.name, jcVariable.vartype, null);
-		List<JCVariableDecl> parameters = List.of(variableDecl);
-
-		//声明异常
-		List<JCExpression> throwsClauses = List.nil();
-		return treeMaker
-				.MethodDef(modifiers, methodName, returnType, typeParameters, parameters, throwsClauses, jcBlock, null);
-
+		jcClass.defs.stream().forEach(e->{
+			if(e.hasTag(JCTree.Tag.METHODDEF)){
+				JCMethodDecl meth = (JCMethodDecl)e;
+				if (methodName.contentEquals(meth.getName())){
+					JCTree tree = e.getTree();
+					tree.accept(new TreeTranslator() {
+						@Override
+						public void visitBlock(JCTree.JCBlock tree) {
+							ListBuffer<JCTree.JCStatement> statements = new ListBuffer();
+							JCTree.JCFieldAccess fieldAccess = treeMaker.Select(treeMaker.Select(treeMaker.Select(treeMaker.Select(treeMaker.Ident(names.fromString("com")),names.fromString("duowan")), names.fromString("util")), names.fromString("DataSecurityService")), names.fromString("aesEncrypt"));
+							JCTree.JCExpression argsExpr = treeMaker.Ident(variableName);
+							JCTree.JCMethodInvocation methodInvocation = treeMaker.Apply(List.nil(), fieldAccess, List.of(argsExpr));
+							JCTree.JCExpressionStatement code = treeMaker.Exec(	treeMaker.Assign(treeMaker.Select(treeMaker.Ident(getNameFromString("this")), variableName),
+									methodInvocation));
+							statements.append(code);
+							result = treeMaker.Block(0, statements.toList());
+						}
+					});
+				}
+			}
+		});
 	}
-
-//	private JCMethodDecl generateToStringBuilderMethod() {
-//
-//		//修改方法级别
-//		JCModifiers modifiers = treeMaker.Modifiers(Flags.PUBLIC);
-//
-//		//添加方法名称
-//		Name methodName = getNameFromString("toString");
-//
-//		//设置调用方法函数类型和调用函数
-//		JCExpressionStatement statement = treeMaker.Exec(treeMaker.Apply(List.of(memberAccess("java.lang.Object")),
-//				memberAccess("com.nicky.lombok.adapter.AdapterFactory.builderStyleAdapter"),
-//				List.of(treeMaker.Ident(getNameFromString("this")))));
-//		ListBuffer<JCStatement> jcStatements = new ListBuffer<>();
-//		jcStatements.append(treeMaker.Return(statement.getExpression()));
-//		//设置方法体
-//		JCBlock jcBlock = treeMaker.Block(0, jcStatements.toList());
-//
-//		//添加返回值类型
-//		JCExpression returnType = memberAccess("java.lang.String");
-//
-//		//参数类型
-//		List<JCTypeParameter> typeParameters = List.nil();
-//
-//		//参数变量
-//		List<JCVariableDecl> parameters = List.nil();
-//
-//		//声明异常
-//		List<JCExpression> throwsClauses = List.nil();
-//
-//		return treeMaker
-//				.MethodDef(modifiers, methodName, returnType, typeParameters, parameters, throwsClauses, jcBlock, null);
-//	}
 
 	private JCExpression memberAccess(String components) {
 		String[] componentArray = components.split("\\.");
